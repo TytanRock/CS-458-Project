@@ -14,7 +14,7 @@ import itertools
 
 
 #pcap or pcapng file goes here; provide the entire path
-filename = 'browsing.pcap'
+filename = 'benign_2.pcap'
 
 
 folder_sum    = "./DATA/PER_SECOND/"
@@ -25,7 +25,7 @@ folder_images = "./DATA/IMAGES/"
 pcap_filter = []
 
 
-filter_string = "ip.addr==10.0.2.15 && tcp" # use tcp or udp filters to display appropriate traffic; you can use a combination of filters too such as --> tcp.flags.syn==1 && tcp.flags.ack==0
+filter_string = "ip.addr==10.152.152.11 && tcp" # use tcp or udp filters to display appropriate traffic; you can use a combination of filters too such as --> tcp.flags.syn==1 && tcp.flags.ack==0
 
 pcap_filter.append(filter_string)
 
@@ -74,6 +74,15 @@ def print_conversation_header(pkt):
         dst_ip			= pkt.ip.dst
         current_time   	= float(pkt.sniff_timestamp)
         human_date		= datetime.datetime.fromtimestamp(round(float(epoch_time)))
+        time_relative   = pkt.tcp.time_relative
+        time_delta      = pkt.tcp.time_delta
+        window_size     = pkt.tcp.window_size
+        window_size_scalefactor = pkt.tcp.window_size_scalefactor
+        window_size_value = pkt.tcp.window_size_value
+        syn_flag        = int((pkt.tcp.flags.int_value) & 0x0002 != 0)
+        ack_flag        = int((pkt.tcp.flags.int_value) & 0x0010 != 0)
+        res_flag        = int((pkt.tcp.flags.int_value) & 0xE000 != 0)
+        push_flag       = int((pkt.tcp.flags.int_value) & 0x0080 != 0)
 
         no_of_packets = 1
 
@@ -100,9 +109,13 @@ def print_conversation_header(pkt):
 
 
         print ("[Number]: "+ str(number) +
+               " [Time]: "+ str(human_date) + 
         	" [Time]: "+ str(human_date) + 
+               " [Time]: "+ str(human_date) + 
+               " [Length]: "+ packet_length + 
         	" [Length]: "+ packet_length + 
-        	" [Source IP]: " + str(src_ip) )
+               " [Length]: "+ packet_length + 
+               " [Source IP]: " + str(src_ip) )
         
 
         float_time = float(epoch_time)
@@ -116,6 +129,15 @@ def print_conversation_header(pkt):
         innerList.append(source_port)
         innerList.append(dest_port)
         innerList.append(inter_arrival_time)
+        innerList.append(time_relative)
+        innerList.append(time_delta)
+        innerList.append(window_size)
+        innerList.append(window_size_scalefactor)
+        innerList.append(window_size_value)
+        innerList.append(syn_flag)
+        innerList.append(ack_flag)
+        innerList.append(res_flag)
+        innerList.append(push_flag)
         
         listoflists.append(innerList)
         
@@ -135,31 +157,34 @@ print(start_time)
 
 
 if (str(filename.split(".")[1]) == "pcap"):
-	print (filename)
+    print (filename)
 
-	with open(folder_csv + filename.split(".")[0] + '.csv', "w") as output:
-		fieldnames = [#'Human Date',
-		'Timestamp', 
-		'Total_Packet_Length' ,
-		'Delta_Time', 
-		'Total_No_of_Packets', 
-		'Source_IP', 'Destination_IP' ,
-		'Source_Port','Dest_Port',
-		'Inter_Arrival_Time'
-		]
-		writer = csv.DictWriter(output, fieldnames=fieldnames)
-		writer.writeheader()
-	cap = pyshark.FileCapture(filename , display_filter = pcap_filter[0])
-	flag = 0
-	cap.apply_on_packets(print_conversation_header)
+    with open(folder_csv + filename.split(".")[0] + '.csv', "w") as output:
+        fieldnames = [#'Human Date',
+        'Timestamp', 
+        'Total_Packet_Length' ,
+        'Delta_Time', 
+        'Total_No_of_Packets', 
+        'Source_IP', 'Destination_IP' ,
+        'Source_Port','Dest_Port',
+        'Inter_Arrival_Time',
+        "Time_Relative", "Time_Delta", "window_size",
+        "window_size_scalefactor", "window_size_value",
+        "syn_flag" , "ack_flag", "res_flag", "push_flag"
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+    cap = pyshark.FileCapture(filename , display_filter = pcap_filter[0])
+    flag = 0
+    cap.apply_on_packets(print_conversation_header)
 else:
-	print (str(filename.split(".")[1]))
+    print (str(filename.split(".")[1]))
 
 
 with open(folder_csv + filename.split(".")[0] + '.csv', "a") as f:
-	writer = csv.writer(f)
-	writer.writerows(listoflists)
-	listoflists = []
+    writer = csv.writer(f)
+    writer.writerows(listoflists)
+    listoflists = []
 
 
 end_time = time.time()

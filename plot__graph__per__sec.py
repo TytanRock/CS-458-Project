@@ -35,6 +35,9 @@ for fcount, filename in enumerate(os.listdir(folder__csv)):
     no_of_packets   = []
     srcp            = []
     dstp            = []
+    time_relative   = []
+    time_delta      = []
+    window_size     = []
 
     count           = 0
 
@@ -51,7 +54,43 @@ for fcount, filename in enumerate(os.listdir(folder__csv)):
         'Destination_IP' ,
         'Source_Port',
         'Dest_Port',
-        'Inter_Arrival_Time'])
+		'Inter_Arrival_Time',
+        "Time_Relative", "Time_Delta", "window_size",
+        "window_size_scalefactor", "window_size_value",
+        "syn_flag", "ack_flag", "res_flag", "push_flag"])
+
+    # Calculate entropy of ports
+    src_port_entropy = []
+    dst_port_entropy = []
+    packet_count = 0
+    last_timestamp = df["Timestamp"][0]
+    src_port_calculation = {}
+    dst_port_calculation = {}
+    total = len(df.index)
+    for index, row in df.iterrows():
+        packet_count += 1 # Increment packet count for new packet
+        src_port = row["Source_Port"]
+        if not src_port in src_port_calculation:
+            src_port_calculation[src_port] = 0
+        src_port_calculation[src_port] += 1
+        dst_port = row["Source_Port"]
+        if not dst_port in dst_port_calculation:
+            dst_port_calculation[dst_port] = 0
+        dst_port_calculation[dst_port] += 1
+        if row["Timestamp"] != last_timestamp or (index + 1) == total:
+            last_timestamp = row["Timestamp"]
+            src_port_entropy_tmp = 0
+            dst_port_entropy_tmp = 0
+            for key, p in src_port_calculation.items():
+                src_port_entropy_tmp += -(p / packet_count) * math.log2(p / packet_count)
+            for key, p in dst_port_calculation.items():
+                dst_port_entropy_tmp += -(p / packet_count) * math.log2(p / packet_count)
+            packet_count = 0
+            src_port_calculation = {}
+            dst_port_calculation = {}
+            src_port_entropy.append(src_port_entropy_tmp)
+            dst_port_entropy.append(dst_port_entropy_tmp)
+
 
     grouped = df.groupby('Timestamp')
 
@@ -60,7 +99,10 @@ for fcount, filename in enumerate(os.listdir(folder__csv)):
     
 
     # print (dir (grouped))
-    grouped.sum().reset_index().to_csv( save__sum__dir,index=False)
+    newframe = grouped.sum()
+    newframe["src_port_entropy"] = src_port_entropy
+    newframe["dst_port_entropy"] = dst_port_entropy
+    newframe.reset_index().to_csv( save__sum__dir,index=False)
     
     print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     print(filename)
