@@ -1,21 +1,20 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[conference,12pt]{IEEEtran}
 \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
-\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usepackage{float}
+\usepackage{listings}
+\usepackage[backend=biber]{biblatex}
+
+\addbibresource{references.bib}
+
 \begin{document}
 
-\title{Training a Neural Net to Recognize Tor Traffic\\
-{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured in Xplore and
-should not be used}
-\thanks{Identify applicable funding agency here. If none, delete this.}
-}
+\title{Training a Neural Net to Recognize Tor Traffic}
 
 \author{\IEEEauthorblockN{Cory Ness}
 \IEEEauthorblockA{\textit{Department of Computer Science} \\
@@ -33,204 +32,127 @@ pric8603@kettering.edu}
 \maketitle
 
 \begin{abstract}
-This paper describes how successful it is to train a neural network to detect Tor traffic. It goes over the various network statistics that were found to be useful in determining if traffic is Tor-related, and how successful a fully trained neural network is in determining if traffic is Tor-related.
+This paper describes how successful it is to train a neural network to detect Tor traffic. It goes over the various network statistics that were found to be useful in determining if traffic is Tor-related, and how successful a fully trained neural network is in determining if traffic is Tor-related. It was found that using an autoencoder neural network for reconstructing traffic statistics provided accurate classification of Tor and Non-Tor traffic, achieving over $\%98$ accuracy in the test cases used. 
 \end{abstract}
 
 \begin{IEEEkeywords}
-Tor, Tor Detection, Neural Network, Wireshark, TShark
+Tor, Tor Detection, Neural Network, Wireshark, TShark, Autoencoder, Reconstruction
 \end{IEEEkeywords}
 
 \section{Introduction}
-This document is a model and instructions for \LaTeX.
-Please observe the conference page limits. 
+Tor is commonly used to anonymize users for both legitimate and illegitimate purposes. In addition, Tor is used in malware, having the infected PC communicate with a control server over the Tor network. Because of this, it is useful to determine if Tor activity is happening on a local network to further scrutinize and determine if the activity is legal or illegal. This causes issues, however, because Tor traffic is not very different from regular traffic. There is no guaranteed IP that Tor traffic has to access, nor any guaranteed port, nor a guaranteed time or anything to definitively prove out that traffic is related to Tor activity. However, while there is nothing to definitively prove all this out, Tor traffic is noticeable in a few, more soft ways that can be defined and used in different detection methods to gain confidence that network is either Tor related or not.
 
-\section{Ease of Use}
+\section{How Tor works}
+Tor anonymizes users by routing traffic through multiple randomly selected Tor nodes before its' destination.  Each node only knows which relay it received data from and which to send it to, shown in figure \ref{fig:how-tor-works}.  According to Tor's own website, it "is similar to using a twisty, hard-to-follow route in order to throw off somebody who is tailing you - and then periodically erasing your footprints." \parencite{cite:Tor-Overview}
 
-\subsection{Maintaining the Integrity of the Specifications}
-
-The IEEEtran class file is used to format your paper and style the text. All margins, 
-column widths, line spaces, and text fonts are prescribed; please do not 
-alter them. You may note peculiarities. For example, the head margin
-measures proportionately more than is customary. This measurement 
-and others are deliberate, using specifications that anticipate your paper 
-as one part of the entire proceedings, and not as an independent document. 
-Please do not revise any of the current designations.
-
-\section{Prepare Your Paper Before Styling}
-Before you begin to format your paper, first write and save the content as a 
-separate text file. Complete all content and organizational editing before 
-formatting. Please note sections \ref{AA}--\ref{SCM} below for more information on 
-proofreading, spelling and grammar.
-
-Keep your text and graphic files separate until after the text has been 
-formatted and styled. Do not number text heads---{\LaTeX} will do that 
-for you.
-
-\subsection{Abbreviations and Acronyms}\label{AA}
-Define abbreviations and acronyms the first time they are used in the text, 
-even after they have been defined in the abstract. Abbreviations such as 
-IEEE, SI, MKS, CGS, ac, dc, and rms do not have to be defined. Do not use 
-abbreviations in the title or heads unless they are unavoidable.
-
-\subsection{Units}
-\begin{itemize}
-\item Use either SI (MKS) or CGS as primary units. (SI units are encouraged.) English units may be used as secondary units (in parentheses). An exception would be the use of English units as identifiers in trade, such as ``3.5-inch disk drive''.
-\item Avoid combining SI and CGS units, such as current in amperes and magnetic field in oersteds. This often leads to confusion because equations do not balance dimensionally. If you must use mixed units, clearly state the units for each quantity that you use in an equation.
-\item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
-\item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
-\end{itemize}
-
-\subsection{Equations}
-Number equations consecutively. To make your 
-equations more compact, you may use the solidus (~/~), the exp function, or 
-appropriate exponents. Italicize Roman symbols for quantities and variables, 
-but not Greek symbols. Use a long dash rather than a hyphen for a minus 
-sign. Punctuate equations with commas or periods when they are part of a 
-sentence, as in:
-\begin{equation}
-a+b=\gamma\label{eq}
-\end{equation}
-
-Be sure that the 
-symbols in your equation have been defined before or immediately following 
-the equation. Use ``\eqref{eq}'', not ``Eq.~\eqref{eq}'' or ``equation \eqref{eq}'', except at 
-the beginning of a sentence: ``Equation \eqref{eq} is . . .''
-
-\subsection{\LaTeX-Specific Advice}
-
-Please use ``soft'' (e.g., \verb|\eqref{Eq}|) cross references instead
-of ``hard'' references (e.g., \verb|(1)|). That will make it possible
-to combine sections, add equations, or change the order of figures or
-citations without having to go through the file line by line.
-
-Please don't use the \verb|{eqnarray}| equation environment. Use
-\verb|{align}| or \verb|{IEEEeqnarray}| instead. The \verb|{eqnarray}|
-environment leaves unsightly spaces around relation symbols.
-
-Please note that the \verb|{subequations}| environment in {\LaTeX}
-will increment the main equation counter even when there are no
-equation numbers displayed. If you forget that, you might write an
-article in which the equation numbers skip from (17) to (20), causing
-the copy editors to wonder if you've discovered a new method of
-counting.
-
-{\BibTeX} does not work by magic. It doesn't get the bibliographic
-data from thin air but from .bib files. If you use {\BibTeX} to produce a
-bibliography you must send the .bib files. 
-
-{\LaTeX} can't read your mind. If you assign the same label to a
-subsubsection and a table, you might find that Table I has been cross
-referenced as Table IV-B3. 
-
-{\LaTeX} does not have precognitive abilities. If you put a
-\verb|\label| command before the command that updates the counter it's
-supposed to be using, the label will pick up the last counter to be
-cross referenced instead. In particular, a \verb|\label| command
-should not go before the caption of a figure or a table.
-
-Do not use \verb|\nonumber| inside the \verb|{array}| environment. It
-will not stop equation numbers inside \verb|{array}| (there won't be
-any anyway) and it might stop a wanted equation number in the
-surrounding equation.
-
-\subsection{Some Common Mistakes}\label{SCM}
-\begin{itemize}
-\item The word ``data'' is plural, not singular.
-\item The subscript for the permeability of vacuum $\mu_{0}$, and other common scientific constants, is zero with subscript formatting, not a lowercase letter ``o''.
-\item In American English, commas, semicolons, periods, question and exclamation marks are located within quotation marks only when a complete thought or name is cited, such as a title or full quotation. When quotation marks are used, instead of a bold or italic typeface, to highlight a word or phrase, punctuation should appear outside of the quotation marks. A parenthetical phrase or statement at the end of a sentence is punctuated outside of the closing parenthesis (like this). (A parenthetical sentence is punctuated within the parentheses.)
-\item A graph within a graph is an ``inset'', not an ``insert''. The word alternatively is preferred to the word ``alternately'' (unless you really mean something that alternates).
-\item Do not use the word ``essentially'' to mean ``approximately'' or ``effectively''.
-\item In your paper title, if the words ``that uses'' can accurately replace the word ``using'', capitalize the ``u''; if not, keep using lower-cased.
-\item Be aware of the different meanings of the homophones ``affect'' and ``effect'', ``complement'' and ``compliment'', ``discreet'' and ``discrete'', ``principal'' and ``principle''.
-\item Do not confuse ``imply'' and ``infer''.
-\item The prefix ``non'' is not a word; it should be joined to the word it modifies, usually without a hyphen.
-\item There is no period after the ``et'' in the Latin abbreviation ``et al.''.
-\item The abbreviation ``i.e.'' means ``that is'', and the abbreviation ``e.g.'' means ``for example''.
-\end{itemize}
-An excellent style manual for science writers is \cite{b7}.
-
-\subsection{Authors and Affiliations}
-\textbf{The class file is designed for, but not limited to, six authors.} A 
-minimum of one author is required for all conference articles. Author names 
-should be listed starting from left to right and then moving down to the 
-next line. This is the author sequence that will be used in future citations 
-and by indexing services. Names should not be listed in columns nor group by 
-affiliation. Please keep your affiliations as succinct as possible (for 
-example, do not differentiate among departments of the same organization).
-
-\subsection{Identify the Headings}
-Headings, or heads, are organizational devices that guide the reader through 
-your paper. There are two types: component heads and text heads.
-
-Component heads identify the different components of your paper and are not 
-topically subordinate to each other. Examples include Acknowledgments and 
-References and, for these, the correct style to use is ``Heading 5''. Use 
-``figure caption'' for your Figure captions, and ``table head'' for your 
-table title. Run-in heads, such as ``Abstract'', will require you to apply a 
-style (in this case, italic) in addition to the style provided by the drop 
-down menu to differentiate the head from the text.
-
-Text heads organize the topics on a relational, hierarchical basis. For 
-example, the paper title is the primary text head because all subsequent 
-material relates and elaborates on this one topic. If there are two or more 
-sub-topics, the next level head (uppercase Roman numerals) should be used 
-and, conversely, if there are not at least two sub-topics, then no subheads 
-should be introduced.
-
-\subsection{Figures and Tables}
-\paragraph{Positioning Figures and Tables} Place figures and tables at the top and 
-bottom of columns. Avoid placing them in the middle of columns. Large 
-figures and tables may span across both columns. Figure captions should be 
-below the figures; table heads should appear above the tables. Insert 
-figures and tables after they are cited in the text. Use the abbreviation 
-``Fig.~\ref{fig}'', even at the beginning of a sentence.
-
-\begin{table}[htbp]
-\caption{Table Type Styles}
-\begin{center}
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-\cline{2-4} 
-\textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\textit{Subhead}}& \textbf{\textit{Subhead}} \\
-\hline
-copy& More table copy$^{\mathrm{a}}$& &  \\
-\hline
-\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
-\end{tabular}
-\label{tab1}
-\end{center}
-\end{table}
-
-\begin{figure}[htbp]
-%\centerline{\includegraphics{fig1.png}}
-\caption{Example of a figure caption.}
-\label{fig}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.45]{Explanations/How-Tor-Works.png}
+    \caption{An example of how Tor routes traffic through random nodes \parencite{cite:Tor-Overview}}
+    \label{fig:how-tor-works}
 \end{figure}
 
-Figure Labels: Use 8 point Times New Roman for Figure labels. Use words 
-rather than symbols or abbreviations when writing Figure axis labels to 
-avoid confusing the reader. As an example, write the quantity 
-``Magnetization'', or ``Magnetization, M'', not just ``M''. If including 
-units in the label, present them within parentheses. Do not label axes only 
-with units. In the example, write ``Magnetization (A/m)'' or ``Magnetization 
-\{A[m(1)]\}'', not just ``A/m''. Do not label axes with a ratio of 
-quantities and units. For example, write ``Temperature (K)'', not 
-``Temperature/K''.
+This routing through various nodes makes it nearly impossible for either a website to know who it is talking to or anyone sniffing the network connection to know what website you're browsing. This secures a large amount of anonymity for the user, and allows them to access materials that would otherwise be blocked.
 
-\section*{Acknowledgment}
+However, since Tor is otherwise using completely legal and non-exploitative ways of securing these connections, it becomes difficult to know what traffic is typical traffic such as video streaming and what traffic is Tor traffic which could be illegal. 
 
-The preferred spelling of the word ``acknowledgment'' in America is without 
-an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
-G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
-acknowledgments in the unnumbered footnote on the first page.
+\section{What is a Neural Network}
+Neural networks are typically used to train a computer to do some task, and consist of a series of simple processing nodes connected to each other.  A nodes' connections will each have a weight assigned, and when data is received the node decides whether to pass the data on to the next node based on the data and the associated weight compared to a threshold value.  During training the weights and thresholds are set randomly, and they are adjusted until the network outputs desired values \parencite{cite:Explained-Neural-Networks}.
 
-\section{Reference-Uses}
-One: \cite{Adaptive-Onsite-Website-Fingerprinting}
-Two: \cite{Machine-Learning-Tor-Detection}
-Three: \cite{Tree-Based-Models}
+\section{Methods of Detecting Tor traffic}
 
-\bibliographystyle{plain}
-\bibliography{references}
+It should be noted that Tor provides a DNS service which can be used to tell if traffic is coming from a Tor exit node \parencite{cite:Tor-Site}.  If the goal of detecting Tor traffic is just to block it this is a useful resource, though there are ways around even this through the use of unlisted nodes. Actually detecting Tor traffic is currently achieved through various means. The first of these is the method we chose, using a neural network to monitor statistics of network traffic and classify it as Tor or non-Tor related. There are other methods, such as using a neural network to monitor the encrypted data and check for malicious website fingerprints, flagging a packet in real-time if it contains a malicious fingerprint \parencite{cite:Adaptive-Onsite-Website-Fingerprinting}, and to monitor the raw traffic and run it through the neural network \parencite{cite:Machine-Learning-Tor-Detection}. These other methods are better for real-time classification of the network traffic, since they perform analysis on a smaller time frame, and possibly on individual packets, but they provide successful rates of around $\%90$, which provides a fair amount of uncertainty in classifying some traffic as benign or malignant.
+
+\section{How we detected Tor traffic}
+We detected Tor traffic by training an autoencoder neural network on various network statistics that were calculated after a period of time of network traffic was captured. We then checked to see if at any given second there was Tor network traffic. The neural network was trained on a benign data set that consisted of transferring a file over SFTP, while it compared against malicious data that consisted of a file transfer over SFTP using Tor. These two use cases are very similar, with the only exception being that Tor is used in the malicious data set, so it would prove useful to determine if the neural network was able to detect the anomalous Tor activity.
+
+The networks statistics that were used to determine if network activity was Tor related or not were the following in 1-second intervals:
+\begin{enumerate}
+    \item Total Packet Length
+    \item Total Number of Packets
+    \item Inter Arrival Time
+    \item Window Size
+    \item Window Size Scalefactor
+    \item Window Size Value
+    \item Syn Flag
+    \item Ack Flag
+    \item Res Flag
+    \item Push Flag
+    \item Source Port Entropy
+    \item Destination Port Entropy
+\end{enumerate}
+
+In order to gain the statistics, a pcap file was provided and ran through a python script that used Tshark to scan through the file, filter it to just the traffic concerning one local IP, and performed analysis to get the relevant properties of each packet. This script would output a csv file with all the properties of every packet, which was then fed into a merging script. The merging script batched all the rows by some common property, in this case it was batched so every point was 1 second and contained the sum of all the properties beforehand. In addition, it would perform more complex analysis, such as entropy calculation of the source and destination ports using the following python code:
+
+\begin{lstlisting}[language=Python, breaklines=true]
+for index, row in df.iterrows():
+    packet_count += 1 # Increment packet count for new packet
+    src_port = row["Source_Port"]
+    if not src_port in src_port_calculation:
+        src_port_calculation[src_port] = 0
+    src_port_calculation[src_port] += 1
+    dst_port = row["Source_Port"]
+    if not dst_port in dst_port_calculation:
+        dst_port_calculation[dst_port] = 0
+    dst_port_calculation[dst_port] += 1
+    if row["Timestamp"] != last_timestamp or (index + 1) == total:
+        last_timestamp = row["Timestamp"]
+        src_port_entropy_tmp = 0
+        dst_port_entropy_tmp = 0
+        for key, p in src_port_calculation.items():
+            src_port_entropy_tmp += -(p / packet_count) * math.log2(p / packet_count)
+        for key, p in dst_port_calculation.items():
+            dst_port_entropy_tmp += -(p / packet_count) * math.log2(p / packet_count)
+        packet_count = 0
+        src_port_calculation = {}
+        dst_port_calculation = {}
+        src_port_entropy.append(src_port_entropy_tmp)
+        dst_port_entropy.append(dst_port_entropy_tmp)
+\end{lstlisting}
+
+Based on previous work in \parencite{cite:Tree-Based-Models}, we expected \texttt{Window Size} to be the most significant contributor to the neural network, with lesser importance in \texttt{Source Port Entropy} and \texttt{Destination Port Entropy}. This is because the window size is relatively constant for traffic routing through Tor, matching up to multiples of some constant. This is much more different than normal traffic, where the window size is adjusted to best fit whatever is being sent between devices, always changing and seemingly random from an outside observer. Along with that, we'd expect port entropy to be a contributing factor because the ports that Tor uses should change at a wider level than normal traffic. Tor has taken steps to reduce its footprint in this regard, which is where \parencite{cite:Tree-Based-Models} makes note that port entropy is no longer the most sound method of classifying Tor and non-Tor traffic. The other statistics that were added may or may not help the model, but since this is an autoencoder neural network, it cannot hurt the model except in time taken to optimize, so little research was done on whether to include or exclude them in the training.
+
+The manner in which we trained the neural network was through reconstruction. The neural network will try to reconstruct data based on statistics of some traffic, and if it's close to the actual data, it will be classified as benign data. However, if the reconstructed data is far from the actual data, the data will be considered malignant, or in other words, is Tor traffic. An example of reconstruction is shown in figure \ref{fig:reconstruction}. The neural network was trained for 60 generations on the benign traffic statistics, attempting to most closely reconstruct the traffic so that traffic that does not match the reconstruction is declared maligned and classified as Tor-related.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.4]{Project-Results/Benign-Reconstruction.png}
+    \caption{An example of the neural network reconstructing data based on a benign data set.}
+    \label{fig:reconstruction}
+\end{figure}
+
+\section{Analysis of Neural Net Training}
+With the method discussed above, we had significant success in determining if traffic was Tor related or not. This is shown in both figures \ref{fig:confusion-matrix}, \ref{fig:reconstruction-error}, and \ref{fig:mse-loss}. Figure \ref{fig:confusion-matrix} details exactly what data points were successfully determined to be benign/maligned, and what points were incorrectly determined benign/maligned. In this case, 1173 of 1176 points were correctly identified benign, and 1229 of 1234 points were correctly identified malign. Using the formula $P_{Correct}= \frac{N_{Correct}} {N_{Total}}$, we get a true positive rate of $\frac{1173}{1176} = \%99.74$ and a true negative rate of $\frac{1229}{1254} = \%98.00$. Overall, this method is $\frac{2402}{2430} = \%98.84$ correct.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.63]{Project-Results/Confusion-Matrix.png}
+    \caption{Confusion Matrix showing the accuracy of the neural network that was trained with provided statistics.}
+    \label{fig:confusion-matrix}
+\end{figure}
+
+Another way to look at the results of the training is by looking at figure \ref{fig:reconstruction-error}, where the data points are characterized by their mean-square-error loss. Two types of data points are plotted, with orange being the maligned data and blue being the benign data. If a point is above the dashed line, it is characterized as maligned, and if it's below it is characterized as benign. This figure shows how the vast majority of benign dots are below the dashed line and orange dots are above the dashed line, but it also shows how there are some data points that are incorrectly above or below the dashed line. These misplaced dots are the false positive and false negative data points, and while there are a good few, they are by far in the minority when compared to the massive number of points that are correctly identified.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.4]{Project-Results/Reconstruction-Error.png}
+    \caption{Reconstruction error showing accuracy of the neural network that was trained with provided statistics}
+    \label{fig:reconstruction-error}
+\end{figure}
+
+Similarly to figure \ref{fig:reconstruction-error}, figure \ref{fig:mse-loss} shows the reconstruction error, but in this case it's bar-plotted with the x-axis indicating the loss. The further to the left of the plot, the more likely it is to be benign data. In this case, the maligned data is so far to the right it's nearly impossible to look at it in clarity, and shows just how poor the maligned data fits with the reconstructed data in most cases.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.6]{Project-Results/MSE-Loss.png}
+    \caption{Graph showing the Mean Square Error loss of the benign data set (blue) and maligned data set (orange). Further to the left indicates closer reconstruction and therefore more likely to be benign.}
+    \label{fig:mse-loss}
+\end{figure}
+
+
+\section{Conclusion}
+The results of the project were very promising, we were able to achieve results similar to \parencite{cite:Tree-Based-Models}, getting in the high ninety percentage for accuracy. As well, there were few false positives and false negatives, suggesting that this method could be used in some form of automation such as logging without worrying too much about clutter and missed traffic. Finally, since this method makes use of MSE, it is possible to tighten the parameters to allow fewer false-positives or false-negatives at the cost of the other, so that it can be tweaked to best accommodate a specific application.
+
+\printbibliography
 
 \end{document}
